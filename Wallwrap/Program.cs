@@ -59,9 +59,9 @@ namespace Wallwrap
                 {
                     Directory.CreateDirectory(ImageSavePath);
                 }
-                bmpWallpaper.Save(ImageSavePath + "\\bing" + DateTime.Now.ToString("yyyyMMdd") + ".jpg", ImageFormat.Jpeg);
+                bmpWallpaper.Save(ImageSavePath + DateTime.Now.ToString("yyyyMMdd") + ".jpg", ImageFormat.Jpeg);
             }
-            string strSavePath = ImageSavePath + "\\bing" + DateTime.Now.ToString("yyyyMMdd") + ".jpg";
+            string strSavePath = ImageSavePath + DateTime.Now.ToString("yyyyMMdd") + ".jpg";
             setWallpaperApi(strSavePath);
         }
 
