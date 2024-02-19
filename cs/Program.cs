@@ -1,91 +1,74 @@
-﻿﻿using System;
-// using System.Collections.Generic;
-// using System.Linq;
-using System.Text;
-// using System.Threading.Tasks;
-using System.Drawing;
-using System.Drawing.Imaging;
+﻿using System;
 using System.IO;
 using System.Net;
-using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using System.Threading;
+using System.Runtime.InteropServices;
+
 
 namespace Wallwrap
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        const string ProjectName = "Wallwrap";
+        const string WallpaperAPI = "https://www.bing.com/HPImageArchive.aspx?idx=0&n=1";
+
+        public static string GetWallpaperPath()
         {
-            if (!CheckDuplicate())
-            {
-                Thread.Sleep(30000); // delay
-                SetWallpaper();
-            }
+            string ImageFolder = Path.Combine(Path.GetTempPath(), ProjectName);
+            string ImagePath = Path.Combine(ImageFolder, DateTime.Now.ToString("yyyyMMdd") + ".jpg");
+            return ImagePath;
         }
 
-        public static bool CheckDuplicate()
+        public static bool HasImage()
         {
-            string ImageFolder = Path.Combine(Path.GetTempPath(), "Wallwrap");
-            string ImageLocation = Path.Combine(ImageFolder, DateTime.Now.ToString("yyyyMMdd") + ".jpg");
+            string ImageFolder = Path.Combine(Path.GetTempPath(), ProjectName);
+            string ImagePath = GetWallpaperPath();
             if (!Directory.Exists(ImageFolder))
             {
                 Directory.CreateDirectory(ImageFolder);
             }
-            return File.Exists(ImageLocation);
+            return File.Exists(ImagePath);
         }
 
-        public static string GetURL()
+        public static string GetWallpaperURL()
         {
-            string InfoUrl = "http://www.bing.com/HPImageArchive.aspx?idx=0&n=1";
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(InfoUrl);
-            request.Method = "GET"; request.ContentType = "text/html;charset=UTF-8";
-            string xmlDoc;
-            // using using to deal HttpWebResponse
-            using (HttpWebResponse webResponse = (HttpWebResponse)request.GetResponse())
-            {
-                Stream stream = webResponse.GetResponseStream();
-                using (StreamReader reader = new StreamReader(stream, Encoding.UTF8))
-                {
-                    xmlDoc = reader.ReadToEnd();
-                }
-            }
-            // Regular expression
-            Regex regex = new Regex("<Url>(?<MyUrl>.*?)</Url>", RegexOptions.IgnoreCase);
-            MatchCollection collection = regex.Matches(xmlDoc);
-            // if 768p
-            string ImageUrl = "http://www.bing.com" + collection[0].Groups["MyUrl"].Value;
-            return ImageUrl.Replace("1366x768", "1920x1080");
+            string XmlDoc = new WebClient().DownloadString(WallpaperAPI);
+            string ImageURL = "https://www.bing.com" + XmlDoc.Split(new string[] { "<url>" }, StringSplitOptions.None)[1].Split(new string[] { "</url>" }, StringSplitOptions.None)[0];
+            return ImageURL;
         }
 
-        public static void SetWallpaper()
+
+        public static void SaveWallpaper()
         {
-            string ImageFolder = Path.Combine(Path.GetTempPath(), "Wallwrap");
-            string ImageLocation = Path.Combine(ImageFolder, DateTime.Now.ToString("yyyyMMdd") + ".jpg");
-            WebRequest webreq = WebRequest.Create(GetURL());
-            //Console.WriteLine(getURL());
-            //Console.ReadLine();
-            WebResponse webres = webreq.GetResponse();
-            using (Stream stream = webres.GetResponseStream())
-            {
-                Bitmap bmpWallpaper = (Bitmap)Image.FromStream(stream);
-                //stream.Close();
-                bmpWallpaper.Save(ImageLocation, ImageFormat.Jpeg);
-            }
-            SetWallpaperApi(ImageLocation);
+            string ImagePath = GetWallpaperPath();
+            string ImageURL = GetWallpaperURL();
+            new WebClient().DownloadFile(ImageURL, ImagePath);
         }
 
 
         [DllImport("user32.dll", EntryPoint = "SystemParametersInfo")]
-        public static extern int SystemParametersInfo(
-                int uAction,
-                int uParam,
-                string lpvParam,
-                int fuWinIni
-                );
-        public static void SetWallpaperApi(string strSavePath)
+        public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+
+        public static void SetWallpaperAPI(string ImagePath)
         {
-            SystemParametersInfo(20, 1, strSavePath, 1);
+            SystemParametersInfo(20, 1, ImagePath, 1);
+        }
+
+
+        public static void SetWallpaper()
+        {
+            string ImagePath = GetWallpaperPath();
+            SetWallpaperAPI(ImagePath);
+        }
+
+        static void Main()
+        {
+            if (!HasImage())
+            {
+                Thread.Sleep(30000);  // 30 seconds
+                SaveWallpaper();
+                SetWallpaper();
+            }
         }
     }
 }
